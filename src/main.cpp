@@ -4,10 +4,13 @@
 #include <string>
 #include "json.hpp"
 #include "PID.h"
+#include <time.h>
 
 // for convenience
 using nlohmann::json;
 using std::string;
+
+using namespace std::chrono;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -30,6 +33,9 @@ string hasData(string s) {
   return "";
 }
 
+bool SIM_RESET = false;
+
+
 int main() {
   uWS::Hub h;
 
@@ -38,6 +44,7 @@ int main() {
    * TODO: Initialize the pid variable.
    */
    // here come dat boi
+
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
@@ -58,6 +65,7 @@ int main() {
           double speed = std::stod(j[1]["speed"].get<string>());
           double angle = std::stod(j[1]["steering_angle"].get<string>());
           double steer_value;
+          double throttle_value;
           /**
            * TODO: Calculate steering value here, remember the steering value is
            *   [-1, 1].
@@ -65,14 +73,37 @@ int main() {
            *   Maybe use another PID controller to control the speed!
            */
 
+           double tau_p = 0.2;
+           double tau_d = 1.4;
+           double tau_i = 1.0;
+
+           pid.Init(tau_p,tau_d,tau_i);
+           //std::cout << pid.Kp_ << std::endl;
+
+           pid.Run(cte);
+
+           //speed controller ------------------------
+           double speed_target = 20;
+           double cse = (speed_target - speed);
+           throttle_value =  0.2 * cse;
+
+
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value
                     << std::endl;
 
           json msgJson;
-          msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["steering_angle"] = pid.steering_angle;
+          msgJson["throttle"] = throttle_value;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+
+          // Reset the car to starting position
+          if (SIM_RESET){
+            msg = "42[\"reset\",{}]";
+            std::cout << "SIMULATOR RESET"<< std::endl;
+
+          }
+
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }  // end "telemetry" if

@@ -14,21 +14,17 @@ PID::PID() {}
 
 PID::~PID() {}
 
-void PID::Init(double &Kp, double &Ki, double &Kd) {
+void PID::Init(vector <double> &p) {
   /**
    * TODO: Initialize PID coefficients (and errors, if needed)
    */
-   //std::cout<< "init done" << std::endl;
-   if(!is_init_){
-     Kp_ = Kp;
-     Ki_ = Ki;
-     Kd_ = Kd;
-     prev_cte_ = 0.0;
-     int_cte_ = 0.0;
-     lastclock = 0;
-     is_init_ = true;
-     loops = 0;
-   }
+   p_ = p;
+   prev_cte_ = 0.0;
+   int_cte_ = 0.0;
+   lastclock = 0;
+   is_init_ = true;
+   loops = 0;
+   total_error_ = 0;
 
 }
 
@@ -57,7 +53,7 @@ double PID::Run(double &cte, double &setpoint){
 
     TotalError();
 
-    return (-Kp_ * cte_ - Kd_ * diff_cte_ - Ki_ * int_cte_);
+    return (-p_[0] * cte_ - p_[2] * diff_cte_ - p_[1] * int_cte_);
   }
 
   std::cout << "PID controller not Initialized" << std::endl;
@@ -67,17 +63,13 @@ double PID::Run(double &cte, double &setpoint){
 
 double PID::Twiddle(double &cte, double &setpoint, int &n){
   double control_val = 0;
-  vector <double> p;
-  p.push_back(Kp_);
-  p.push_back(Ki_);
-  p.push_back(Kd_);
 
   vector <double> dp{1,1,1};
   double tol = 0.2;
 
 
   if(loops<=n){
-
+  // run until n samples are collected
   control_val =  Run(cte,setpoint);
   SIM_RESET = false;
   }
@@ -85,22 +77,21 @@ double PID::Twiddle(double &cte, double &setpoint, int &n){
   else{
     // if loops are reached reset the sim and initalize the controller
     is_init_ = false;
-    Init(p[0],p[1],p[2]);
+    //Init(p[0],p[1],p[2]);
     SIM_RESET = true;
+    best_error = TotalError();
 
-  }
 
-  int it = 0;
-  double dp_sum = std::accumulate(dp.begin(), dp.end(), 0.0);
-  std::cout << dp_sum << std::endl;
+    int it = 0;
+    double dp_sum = std::accumulate(dp.begin(), dp.end(), 0.0);
+    std::cout << dp_sum << std::endl;
 
-  while(dp_sum > tol){
 
-    for(int i = 0; i < p.size(); i++){
+
+    /*for(int i = 0; i < p.size(); i++){
 
       p[i] += dp[i];
-
-    }
+    }*/
 
   }
 

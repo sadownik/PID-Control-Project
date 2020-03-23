@@ -5,12 +5,13 @@
 #include "json.hpp"
 #include "PID.h"
 #include <time.h>
+#include <numeric>
 
 // for convenience
 using nlohmann::json;
 using std::string;
 
-using namespace std::chrono;
+
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -35,18 +36,31 @@ string hasData(string s) {
 
 
 //bool SIM_RESET = false;
+double err = 0;
+double best_error = 0;
+bool base_run = false;
+bool first_run = false;
 
+int it;
+vector <double> dp{1,1,1};
 
 int main() {
   uWS::Hub h;
 
   PID pid;
   PID thr_pid;
+  //{0.2,1.4,1.0}
+  vector <double> p_str{0.0,0.0,0.0};
+
+  pid.Init(p_str);
+
+  vector <double> p_thr{0.2,0.0,0.0};
+
+  thr_pid.Init(p_thr);
 
   /**
    * TODO: Initialize the pid variable.
    */
-
 
 
   h.onMessage([&pid,&thr_pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
@@ -74,25 +88,68 @@ int main() {
            *   Maybe use another PID controller to control the speed!
            */
 
-          double tau_p = 0.2;
-          double tau_d = 1.4;
-          double tau_i = 1.0;
-
-          pid.Init(tau_p,tau_d,tau_i);
-
-          double tau_p2 = 0.2;
-          double tau_d2 = 0.0;
-          double tau_i2 = 0.0;
-
-          thr_pid.Init(tau_p2,tau_d2,tau_i2);
+           double steering_value = 0;
 
 
           double setpoint_steering = 0.0;
           //double steering_value = pid.Run(cte, setpoint_steering);
-          int n=30;
-          double steering_value = pid.Twiddle(cte, setpoint_steering, n);
-          std::cout<< pid.loops << std::endl;
-          std::cout<< pid.TotalError() << std::endl;
+
+          //get baseline error
+          int n=100;
+          if(pid.loops<n && !base_run){
+            steering_value = pid.Run(cte, setpoint_steering);
+
+          }
+          else if(pid.loops == n && !base_run){
+            base_run = true;
+            best_error = pid.TotalError();
+            pid.p_[0]+= dp[0];
+            pid.Init(pid.p_);
+
+          }
+
+
+          if(base_run){
+
+            if(pid.loops<n && !first_run){
+              steering_value = pid.Run(cte, setpoint_steering);
+
+            }
+            else if(pid.loops == n && !first_run){
+              first_run = true;
+              err = pid.TotalError();
+              if(err < best_error){
+                best_err = err;
+                dp[0] *= 1.1;
+              }
+              else{
+                p[0] -= 2 * dp[0];
+
+              }
+            }
+
+          }
+
+            err = pid.TotalError();
+            std::cout<< err << std::endl;
+
+            pid.SIM_RESET = true;
+
+            if(err < best_error){
+              pid.p_[0]+=dp[0];
+              pid.Init(pid.p_);
+              best_error = err;
+
+
+          }
+
+
+          //double steering_value = pid.Twiddle(cte, setpoint_steering, n);
+          //std::cout<< pid.loops << std::endl;
+
+
+
+
           double setpoint_speed = 20;
           double throttle_value = thr_pid.Run(speed, setpoint_speed);
 
@@ -110,8 +167,9 @@ int main() {
             msg = "42[\"reset\",{}]";
             std::cout << "SIMULATOR RESET"<< std::endl;
           }
+          pid.SIM_RESET = false;
 
-          std::cout << msg << std::endl;
+
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }  // end "telemetry" if
       } else {
@@ -141,4 +199,5 @@ int main() {
   }
 
   h.run();
+
 }

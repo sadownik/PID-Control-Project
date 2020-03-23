@@ -24,7 +24,7 @@ class PID {
    * Initialize PID.
    * @param (Kp_, Ki_, Kd_) The initial PID coefficients
    */
-  void Init(double &Kp, double &Ki, double &Kd);
+  void Init(vector <double> &p);
 
   /**
    * Update the PID error variables given cross track error.
@@ -45,8 +45,9 @@ class PID {
    */
 
   double TotalError();
-  int loops;
+  int loops = 0;
   bool SIM_RESET = false;
+  vector <double> p_;
 
   private:
 
@@ -56,6 +57,9 @@ class PID {
   int lastclock;
   double cte_;
   double total_error_;
+
+  double best_error;
+
 
 
   /**

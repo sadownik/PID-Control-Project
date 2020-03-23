@@ -33,20 +33,23 @@ string hasData(string s) {
   return "";
 }
 
-bool SIM_RESET = false;
+
+//bool SIM_RESET = false;
 
 
 int main() {
   uWS::Hub h;
 
   PID pid;
+  PID thr_pid;
+
   /**
    * TODO: Initialize the pid variable.
    */
-   // here come dat boi
 
 
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+
+  h.onMessage([&pid,&thr_pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -64,8 +67,6 @@ int main() {
           double cte = std::stod(j[1]["cte"].get<string>());
           double speed = std::stod(j[1]["speed"].get<string>());
           double angle = std::stod(j[1]["steering_angle"].get<string>());
-          double steer_value;
-          double throttle_value;
           /**
            * TODO: Calculate steering value here, remember the steering value is
            *   [-1, 1].
@@ -73,35 +74,41 @@ int main() {
            *   Maybe use another PID controller to control the speed!
            */
 
-           double tau_p = 0.2;
-           double tau_d = 1.4;
-           double tau_i = 1.0;
+          double tau_p = 0.2;
+          double tau_d = 1.4;
+          double tau_i = 1.0;
 
-           pid.Init(tau_p,tau_d,tau_i);
-           //std::cout << pid.Kp_ << std::endl;
+          pid.Init(tau_p,tau_d,tau_i);
 
-           pid.Run(cte);
+          double tau_p2 = 0.2;
+          double tau_d2 = 0.0;
+          double tau_i2 = 0.0;
 
-           //speed controller ------------------------
-           double speed_target = 20;
-           double cse = (speed_target - speed);
-           throttle_value =  0.2 * cse;
+          thr_pid.Init(tau_p2,tau_d2,tau_i2);
 
+
+          double setpoint_steering = 0.0;
+          //double steering_value = pid.Run(cte, setpoint_steering);
+          int n=30;
+          double steering_value = pid.Twiddle(cte, setpoint_steering, n);
+          std::cout<< pid.loops << std::endl;
+          std::cout<< pid.TotalError() << std::endl;
+          double setpoint_speed = 20;
+          double throttle_value = thr_pid.Run(speed, setpoint_speed);
 
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value
-                    << std::endl;
+          //std::cout << "CTE: " << cte << " Steering Value: " << steering_value
+            //        << std::endl;
 
           json msgJson;
-          msgJson["steering_angle"] = pid.steering_angle;
+          msgJson["steering_angle"] = steering_value;
           msgJson["throttle"] = throttle_value;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
 
           // Reset the car to starting position
-          if (SIM_RESET){
+          if (pid.SIM_RESET){
             msg = "42[\"reset\",{}]";
             std::cout << "SIMULATOR RESET"<< std::endl;
-
           }
 
           std::cout << msg << std::endl;

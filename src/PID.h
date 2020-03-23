@@ -4,6 +4,8 @@
 #include <vector>
 using std::vector;
 
+
+
 class PID {
  public:
   /**
@@ -16,7 +18,7 @@ class PID {
    */
   virtual ~PID();
 
-  double steering_angle;
+
 
   /**
    * Initialize PID.
@@ -34,16 +36,17 @@ class PID {
    * Calculate the total PID error.
    * @output The total PID error
    */
-  void Run(double &cte);
+  double Run(double &cte, double &setpoint);
 
 
-  void Twiddle(vector <double> dp);
+  double Twiddle(double &cte, double &setpoint, int &n);
   /**
    * apply twiddle from the class.
    */
 
   double TotalError();
-
+  int loops;
+  bool SIM_RESET = false;
 
   private:
 
@@ -51,6 +54,10 @@ class PID {
   double prev_cte_;
   double int_cte_;
   int lastclock;
+  double cte_;
+  double total_error_;
+
+
   /**
    * PID Errors
    */

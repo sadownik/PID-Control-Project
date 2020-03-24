@@ -41,7 +41,7 @@ int main() {
 
   PID pid;
   PID thr_pid;
-  vector <double> p_str{0.1,5.0,1.2};
+  vector <double> p_str{0.2,0.3,1.2};
   int n = 200;
 
   pid.Init(p_str);
@@ -87,7 +87,7 @@ int main() {
 
           steering_value = pid.Run(cte, setpoint_steering);
 
-          double setpoint_speed = 40;
+          double setpoint_speed = 20;
           double throttle_value = thr_pid.Run(speed, setpoint_speed);
 
           // DEBUG

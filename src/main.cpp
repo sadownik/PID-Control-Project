@@ -35,32 +35,25 @@ string hasData(string s) {
 }
 
 
-//bool SIM_RESET = false;
-double err = 0;
-double best_error = 0;
-bool base_run = false;
-bool first_run = false;
-
-int it;
-vector <double> dp{1,1,1};
 
 int main() {
   uWS::Hub h;
 
   PID pid;
   PID thr_pid;
-  //{0.2,1.4,1.0}
-  vector <double> p_str{0.0,0.0,0.0};
+  vector <double> p_str{0.1,5.0,1.2};
+  int n = 200;
 
   pid.Init(p_str);
 
-  vector <double> p_thr{0.2,0.0,0.0};
-
+  vector <double> p_thr{0.2,0.1,0.1};
   thr_pid.Init(p_thr);
 
   /**
    * TODO: Initialize the pid variable.
    */
+
+
 
 
   h.onMessage([&pid,&thr_pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
@@ -88,69 +81,13 @@ int main() {
            *   Maybe use another PID controller to control the speed!
            */
 
-           double steering_value = 0;
 
-
+          double steering_value = 0;
           double setpoint_steering = 0.0;
-          //double steering_value = pid.Run(cte, setpoint_steering);
 
-          //get baseline error
-          int n=100;
-          if(pid.loops<n && !base_run){
-            steering_value = pid.Run(cte, setpoint_steering);
+          steering_value = pid.Run(cte, setpoint_steering);
 
-          }
-          else if(pid.loops == n && !base_run){
-            base_run = true;
-            best_error = pid.TotalError();
-            pid.p_[0]+= dp[0];
-            pid.Init(pid.p_);
-
-          }
-
-
-          if(base_run){
-
-            if(pid.loops<n && !first_run){
-              steering_value = pid.Run(cte, setpoint_steering);
-
-            }
-            else if(pid.loops == n && !first_run){
-              first_run = true;
-              err = pid.TotalError();
-              if(err < best_error){
-                best_err = err;
-                dp[0] *= 1.1;
-              }
-              else{
-                p[0] -= 2 * dp[0];
-
-              }
-            }
-
-          }
-
-            err = pid.TotalError();
-            std::cout<< err << std::endl;
-
-            pid.SIM_RESET = true;
-
-            if(err < best_error){
-              pid.p_[0]+=dp[0];
-              pid.Init(pid.p_);
-              best_error = err;
-
-
-          }
-
-
-          //double steering_value = pid.Twiddle(cte, setpoint_steering, n);
-          //std::cout<< pid.loops << std::endl;
-
-
-
-
-          double setpoint_speed = 20;
+          double setpoint_speed = 40;
           double throttle_value = thr_pid.Run(speed, setpoint_speed);
 
           // DEBUG
@@ -166,8 +103,9 @@ int main() {
           if (pid.SIM_RESET){
             msg = "42[\"reset\",{}]";
             std::cout << "SIMULATOR RESET"<< std::endl;
+            pid.SIM_RESET = false;
           }
-          pid.SIM_RESET = false;
+
 
 
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);

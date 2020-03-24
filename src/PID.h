@@ -44,10 +44,14 @@ class PID {
    * apply twiddle from the class.
    */
 
+  double pid_tune(double &cte, double &setpoint, int &n, int param);
+
+
   double TotalError();
   int loops = 0;
   bool SIM_RESET = false;
   vector <double> p_;
+  int finished = 0;
 
   private:
 
@@ -58,7 +62,7 @@ class PID {
   double cte_;
   double total_error_;
 
-  double best_error;
+  double best_error = 10000;
 
 
 

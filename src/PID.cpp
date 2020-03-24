@@ -60,7 +60,7 @@ double PID::Run(double &cte, double &setpoint){
   return 0;
 
 }
-
+/*
 double PID::Twiddle(double &cte, double &setpoint, int &n){
   double control_val = 0;
 
@@ -91,23 +91,47 @@ double PID::Twiddle(double &cte, double &setpoint, int &n){
     /*for(int i = 0; i < p.size(); i++){
 
       p[i] += dp[i];
-    }*/
+    }
 
+  }*/
+
+
+  double PID::pid_tune(double &cte, double &setpoint, int &n, int param){
+
+    double control_output = 0.0;
+
+    if(loops<n){
+       control_output = Run(cte, setpoint);
+    }
+    else{
+      double err = TotalError();
+      std::cout <<"error "<< err << std::endl;
+      SIM_RESET = true;
+      if(err<best_error){
+        best_error = err;
+        p_[param]+=0.1;
+        std::cout<< "gains "<<p_[0]<<" " << p_[1]<<" " << p_[2]<<std::endl;
+
+      }
+      else{
+
+        std::cout << "finished "  << std::endl;
+        std::cout <<"param "<< param << std::endl;
+        finished +=1;
+        if(finished>2){
+          finished = 0;
+        }
+        p_[finished]+=0.1;
+      }
+
+      Init(p_);
+
+    }
+
+    return control_output;
   }
 
 
-
-
-
-
-  return control_val;
-
-  //vector<int> dp{ 1, 1, 1 };
-
-  // run pid loop for a bit and then check the summed errors()
-
-
-}
 
 double PID::TotalError() {
   /**
